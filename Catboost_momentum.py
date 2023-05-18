@@ -5,18 +5,44 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd 
 import numpy as np
-# import talib
+
 import statsmodels.api as sm 
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numba 
 from numba import jit
-# from scipy.stats import ttest_1samp
 import warnings
 import matplotlib 
 warnings.filterwarnings('ignore')  #过滤代码运行过程中烦人的警告
 matplotlib.rcParams['axes.unicode_minus']=False #解决画图中负数显示问题
+
 #%%通用函数
+from scipy import stats
+#计算LLT
+import numba
+@numba.jit 
+def shift(self, num, fill_value=np.nan):
+    result = np.empty_like(self)
+    if num > 0:
+        result[:num] = fill_value
+        result[num:] = self[:-num]
+    elif num < 0:
+        result[num:] = fill_value
+        result[:num] = self[-num:]
+    else:
+        result[:] = self
+    return result
+
+@numba.jit
+def llt2(values, window):
+    a   = 2/(1+window); p0 = a-a*a/4; p1 = a*a/2;
+    p2  = a-a*a*3/4;f1 = 2*(1-a); f2 = (1-a)*(1-a)
+    val = np.array(values); out = np.array(values)
+    tmp = (p0*val)+(p1*shift(val,1))-(p2*shift(val,2))
+    for i in np.arange(2,val.shape[0]):
+        out[i] = tmp[i] + f1*out[i-1] - f2*out[i-2]
+    out[0:window-1] = np.nan
+    return out
 def Indicators(value):
     '''
     PARAMETERS
@@ -213,8 +239,8 @@ def get_grouped_data(shaped_data,freq,LLT_w_fast=10, LLT_w_slow=30,back_mltp=0,L
     '''
     # slicer = slice(239-back_mltp*freq, 480, freq)
     # selected_time = time_list[slicer]
+    # data_daily_raw = shaped_data[t]
 
-    data_daily_raw = shaped_data[t]
     slicer_t = slice(240, 481, freq)
     slicer_y = slice(239-back_mltp*freq, 240, freq)
     slicers = (slicer_y, slicer_t)
@@ -250,11 +276,12 @@ def get_grouped_data(shaped_data,freq,LLT_w_fast=10, LLT_w_slow=30,back_mltp=0,L
     grouped_arr[np.isinf(grouped_arr)] = 0.0
     # grouped_arr格式为三维的array, (date,(r1,r2...rn),(future,LLT_f_fast,LLT_f_slow,fut_vlm,fut_oi,index,idx_vlm,basis))
     return grouped_arr,selected_time[:-1]
+
 freq_sig = 30
 freq_pre = 30
 LLT_w_fast = 10
 LLT_w_slow = 30
-back_mltp = 2
+back_mltp = 0
 IF_grouped_arr_sig,selected_time = get_grouped_data(IF_shaped_data,freq_sig,LLT_w_fast, LLT_w_slow,back_mltp=back_mltp,LLT_udly_idx=0)
 IH_grouped_arr_sig,selected_time = get_grouped_data(IH_shaped_data,freq_sig,LLT_w_fast, LLT_w_slow,back_mltp=back_mltp,LLT_udly_idx=0)
 IC_grouped_arr_sig,selected_time = get_grouped_data(IC_shaped_data,freq_sig,LLT_w_fast, LLT_w_slow,back_mltp=back_mltp,LLT_udly_idx=0)
@@ -278,6 +305,54 @@ strgy_args = Strgy_args(orientation='momentum',# 方向：动量momentum, 反转
 
 #%%
 # grouped_arr格式为三维的array, (date,(r1,r2...rn),(future,LLT_f_fast,LLT_f_slow,fut_vlm,fut_oi,index,idx_vlm,basis))
-
 signal_arr = IH_grouped_arr_sig[:,:,0]
-predict_arr = IH_grouped_arr_pre[:,:,0]
+# predict_arr = IH_grouped_arr_pre[:,:,0]
+
+#%%
+import catboost
+from sklearn.model_selection import train_test_split
+
+#%%
+retns_df = pd.DataFrame(signal_arr, columns=['r{}'.format(x) for x in range(signal_arr.shape[1])])
+label = 'r7'
+features = ['r0','r1','r2','r5','r6']
+
+# null_value_stats = retns_df.isnull().sum(axis=0)
+# null_value_stats[null_value_stats != 0]
+# print(null_value_stats)
+sample_df = pd.DataFrame()
+
+func = lambda x: 'up' if x>0 else ('down' if x<0 else np.NaN)
+sample_df[features] = retns_df[features].applymap(func)
+sample_df[label] = retns_df[label].apply(func)
+
+
+sample_df.fillna(-999, inplace=True)
+
+trian_set =  sample_df.iloc[:-300]
+test_set = sample_df.iloc[-300:]
+
+y = trian_set[label]
+X = trian_set[features]
+
+categorical_features_indices = np.where(X.dtypes != float)[0]
+X_train, X_validation, y_train, y_validation = train_test_split(X, y, train_size=0.75, random_state=42)
+X_test = test_set
+#%%
+from catboost import CatBoostClassifier, Pool, metrics, cv
+from sklearn.metrics import accuracy_score
+
+model = CatBoostClassifier(
+    custom_loss=[metrics.Accuracy()],
+    random_seed=42,
+    logging_level='Silent'
+)
+
+#%%
+model.fit(
+    X_train, y_train,
+    cat_features=categorical_features_indices,
+    eval_set=(X_validation, y_validation),
+    plot=True
+)
+# %%
