@@ -306,53 +306,85 @@ strgy_args = Strgy_args(orientation='momentum',# 方向：动量momentum, 反转
 #%%
 # grouped_arr格式为三维的array, (date,(r1,r2...rn),(future,LLT_f_fast,LLT_f_slow,fut_vlm,fut_oi,index,idx_vlm,basis))
 signal_arr = IH_grouped_arr_sig[:,:,0]
-# predict_arr = IH_grouped_arr_pre[:,:,0]
+train_slicer = slice(0,-300)
+test_slicer = slice(-300,-1)
+
+train_future_set = IH_grouped_arr_sig[train_slicer,:,0]
+train_future_set = np.concatenate((train_future_set,IC_grouped_arr_sig[train_slicer,:,0]),axis=0)
+train_future_set = np.concatenate((train_future_set,IF_grouped_arr_sig[train_slicer,:,0]),axis=0)
+
+test_future_IH = IH_grouped_arr_pre[test_slicer,:,0]
+test_future_IC = IC_grouped_arr_pre[test_slicer,:,0]
+test_future_IF = IF_grouped_arr_pre[test_slicer,:,0]
 
 #%%
 import catboost
 from sklearn.model_selection import train_test_split
-
-#%%
-retns_df = pd.DataFrame(signal_arr, columns=['r{}'.format(x) for x in range(signal_arr.shape[1])])
-label = 'r7'
-features = ['r0','r1','r2','r5','r6']
-
-# null_value_stats = retns_df.isnull().sum(axis=0)
-# null_value_stats[null_value_stats != 0]
-# print(null_value_stats)
-sample_df = pd.DataFrame()
-
-func = lambda x: 'up' if x>0 else ('down' if x<0 else np.NaN)
-sample_df[features] = retns_df[features].applymap(func)
-sample_df[label] = retns_df[label].apply(func)
-
-
-sample_df.fillna(-999, inplace=True)
-
-trian_set =  sample_df.iloc[:-300]
-test_set = sample_df.iloc[-300:]
-
-y = trian_set[label]
-X = trian_set[features]
-
-categorical_features_indices = np.where(X.dtypes != float)[0]
-X_train, X_validation, y_train, y_validation = train_test_split(X, y, train_size=0.75, random_state=42)
-X_test = test_set
-#%%
-from catboost import CatBoostClassifier, Pool, metrics, cv
+from catboost import CatBoostRegressor, Pool, metrics, cv
 from sklearn.metrics import accuracy_score
 
-model = CatBoostClassifier(
-    custom_loss=[metrics.Accuracy()],
-    random_seed=42,
-    logging_level='Silent'
-)
-
 #%%
-model.fit(
-    X_train, y_train,
-    cat_features=categorical_features_indices,
-    eval_set=(X_validation, y_validation),
+train_df = pd.DataFrame(train_future_set, columns=['r{}'.format(x) for x in range(train_future_set.shape[1])])
+
+IH_test_df = pd.DataFrame(test_future_IH, columns=['r{}'.format(x) for x in range(test_future_IH.shape[1])])
+IC_test_df = pd.DataFrame(test_future_IC, columns=['r{}'.format(x) for x in range(test_future_IC.shape[1])])
+IF_test_df = pd.DataFrame(test_future_IF, columns=['r{}'.format(x) for x in range(test_future_IF.shape[1])])
+
+label = 'r7'
+features = ['r1','r2','r5','r6']
+#%%
+# def get_label_and_features(df,label,features):
+#     LnF = pd.DataFrame() # label and features
+#     func = lambda x: 1 if x>0 else (0 if x<0 else np.NaN)
+#     LnF[features] = df[features].applymap(func)
+#     LnF[label] = df[label].apply(func)
+#     LnF = LnF.dropna(axis=0)
+#     return LnF
+
+# train_set = get_label_and_features(train_df,label,features)
+# IH_test_set = get_label_and_features(IH_test_df,label,features)
+# IC_test_set = get_label_and_features(IC_test_df,label,features)
+# IF_test_set = get_label_and_features(IF_test_df,label,features)
+
+y = train_df[label]
+X = train_df[features]
+
+X_train, X_validation, y_train, y_validation = train_test_split(X, y, train_size=0.75, random_state=42)
+X_test = IH_test_df
+# %% Choose the best param and early stop
+params = {
+    'iterations': 500,
+    'learning_rate': 0.1,
+    'loss_function': 'RMSE',
+    'eval_metric':'RMSE',
+    'random_seed': 42,
+    'logging_level': 'Silent',
+    # 'use_best_model': True,
+    # 'od_type': 'Iter',
+    # 'od_wait': 40
+}
+
+train_pool = Pool(X_train, y_train)
+train_pool = Pool(X_validation, y_validation)
+# train_pool = Pool(X_train, y_train, cat_features=categorical_features_indices)
+# validate_pool = Pool(X_validation, y_validation, cat_features=categorical_features_indices)
+model = CatBoostRegressor(**params)
+model.fit(X_train, y_train,plot=True)
+#%%
+cv_data = cv(
+    Pool(X,y),
+    params,
     plot=True
 )
-# %%
+#%%
+predictions = model.predict(X_test)
+predictions_probs = model.predict_proba(X_test)
+print(predictions)
+print(predictions_probs)
+
+
+#%%
+model.plot_tree(
+    tree_idx=2
+    # pool=train_pool
+)
