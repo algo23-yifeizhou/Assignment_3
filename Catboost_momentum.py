@@ -207,8 +207,6 @@ def net_value(returns, benchmark=None,commission=0.0000):
 # 其中，第一天数据=np.array([future_arr, future_volume_arr, open_interest_arr,
 # #                         index_arr, index_volume_arr,
 # #                         basis_arr]).T
-
-# code_name = 'IC'
 folder_path = 'my_data'
 def read_pkl_data(code_name, folder_path):
     data_path = folder_path + '\\{}_shaped_data.pkl'.format(code_name)
@@ -227,7 +225,7 @@ IF_shaped_data, _         = read_pkl_data('IF',folder_path)
 date_list = time_info[0]
 time_list = time_info[1]
 
-#%%
+#%% 计算区间收益率
 def get_grouped_data(shaped_data,freq,LLT_w_fast=10, LLT_w_slow=30,back_mltp=0,LLT_udly_idx=0):
     '''
     shaped_data: 清洗好的源数据,昨天和今天的数据拼接,(239,240,241)=(y_15:00,t_9:30,t_9:31)
@@ -303,11 +301,15 @@ strgy_args = Strgy_args(orientation='momentum',# 方向：动量momentum, 反转
                         signal_frequency=freq_sig,
                         predict_frequency=freq_pre)
 
-#%%
+#%% 设置训练集和测试集
+import catboost
+from sklearn.model_selection import train_test_split
+from catboost import CatBoostRegressor,CatBoostClassifier, Pool, metrics, cv
+from sklearn.metrics import accuracy_score
 # grouped_arr格式为三维的array, (date,(r1,r2...rn),(future,LLT_f_fast,LLT_f_slow,fut_vlm,fut_oi,index,idx_vlm,basis))
 signal_arr = IH_grouped_arr_sig[:,:,0]
-train_slicer = slice(0,-300)
-test_slicer = slice(-300,-1)
+train_slicer = slice(0,1200)
+test_slicer = slice(1200,signal_arr.shape[0])
 
 train_future_set = IH_grouped_arr_sig[train_slicer,:,0]
 train_future_set = np.concatenate((train_future_set,IC_grouped_arr_sig[train_slicer,:,0]),axis=0)
@@ -316,75 +318,101 @@ train_future_set = np.concatenate((train_future_set,IF_grouped_arr_sig[train_sli
 test_future_IH = IH_grouped_arr_pre[test_slicer,:,0]
 test_future_IC = IC_grouped_arr_pre[test_slicer,:,0]
 test_future_IF = IF_grouped_arr_pre[test_slicer,:,0]
+#%% 打分类标签
+def get_label_and_features(df,label,features):
+    LnF = pd.DataFrame() # label and features
+    func = lambda x: 1 if x>0 else (-1 if x<0 else np.NaN)
+    LnF[features] = df[features].applymap(func)
+    LnF[label] = df[label].apply(func)
+    LnF = LnF.dropna(axis=0)
+    return LnF.astype(int)
 
-#%%
-import catboost
-from sklearn.model_selection import train_test_split
-from catboost import CatBoostRegressor, Pool, metrics, cv
-from sklearn.metrics import accuracy_score
+columns = np.array(['r{}'.format(x) for x in range(train_future_set.shape[1])])
+train_df = pd.DataFrame(train_future_set, columns=columns)
 
-#%%
-train_df = pd.DataFrame(train_future_set, columns=['r{}'.format(x) for x in range(train_future_set.shape[1])])
-
-IH_test_df = pd.DataFrame(test_future_IH, columns=['r{}'.format(x) for x in range(test_future_IH.shape[1])])
-IC_test_df = pd.DataFrame(test_future_IC, columns=['r{}'.format(x) for x in range(test_future_IC.shape[1])])
-IF_test_df = pd.DataFrame(test_future_IF, columns=['r{}'.format(x) for x in range(test_future_IF.shape[1])])
+IH_test_df = pd.DataFrame(test_future_IH, columns=columns)
+IC_test_df = pd.DataFrame(test_future_IC, columns=columns)
+IF_test_df = pd.DataFrame(test_future_IF, columns=columns)
 
 label = 'r7'
-features = ['r1','r2','r5','r6']
+features = ['r1','r5','r6']
+###################不打分类标签这段注释掉######################
+train_set = get_label_and_features(train_df,label,features)
+IH_test_set = get_label_and_features(IH_test_df,label,features)
+IC_test_set = get_label_and_features(IC_test_df,label,features)
+IF_test_set = get_label_and_features(IF_test_df,label,features)
+#############################################################
 #%%
-# def get_label_and_features(df,label,features):
-#     LnF = pd.DataFrame() # label and features
-#     func = lambda x: 1 if x>0 else (0 if x<0 else np.NaN)
-#     LnF[features] = df[features].applymap(func)
-#     LnF[label] = df[label].apply(func)
-#     LnF = LnF.dropna(axis=0)
-#     return LnF
-
-# train_set = get_label_and_features(train_df,label,features)
-# IH_test_set = get_label_and_features(IH_test_df,label,features)
-# IC_test_set = get_label_and_features(IC_test_df,label,features)
-# IF_test_set = get_label_and_features(IF_test_df,label,features)
-
-y = train_df[label]
-X = train_df[features]
+y = train_set[label]
+X = train_set[features]
 
 X_train, X_validation, y_train, y_validation = train_test_split(X, y, train_size=0.75, random_state=42)
-X_test = IH_test_df
+X_test = IH_test_set
+categorical_features_indices = np.where(X.dtypes != float)[0]
 # %% Choose the best param and early stop
-params = {
+classify_params = {
     'iterations': 500,
     'learning_rate': 0.1,
-    'loss_function': 'RMSE',
-    'eval_metric':'RMSE',
-    'random_seed': 42,
+    'eval_metric': metrics.Accuracy(),
+    'random_seed': 23,
     'logging_level': 'Silent',
-    # 'use_best_model': True,
-    # 'od_type': 'Iter',
-    # 'od_wait': 40
+    'use_best_model': False
 }
 
-train_pool = Pool(X_train, y_train)
-train_pool = Pool(X_validation, y_validation)
-# train_pool = Pool(X_train, y_train, cat_features=categorical_features_indices)
-# validate_pool = Pool(X_validation, y_validation, cat_features=categorical_features_indices)
-model = CatBoostRegressor(**params)
-model.fit(X_train, y_train,plot=True)
-#%%
-cv_data = cv(
-    Pool(X,y),
-    params,
+train_pool = Pool(X_train, y_train, cat_features=categorical_features_indices)
+validate_pool = Pool(X_validation, y_validation, cat_features=categorical_features_indices)
+model = CatBoostClassifier(**classify_params)
+
+model.fit(
+    X_train, y_train,
+    cat_features=categorical_features_indices,
+    eval_set=(X_validation, y_validation),
+    logging_level='Verbose',  # you can uncomment this for text output
     plot=True
 )
 #%%
-predictions = model.predict(X_test)
-predictions_probs = model.predict_proba(X_test)
-print(predictions)
-print(predictions_probs)
-
-
-#%%
-model.plot_tree(
-    tree_idx=2
-    # pool=train_pool
+cv_params = model.get_params()
+cv_params.update({
+    'loss_function': metrics.Logloss()
+})
+cv_data = cv(
+    Pool(X, y, cat_features=categorical_features_indices),
+    cv_params,
+    plot=True
 )
+#%%
+# predictions = model.predict(X_test)
+# # predictions_probs = model.predict_proba(X_test)
+# print(predictions)
+# # print(predictions_probs)
+
+
+
+backtest_set = IC_test_set
+back_test_df = IC_test_df
+retns_ML = []
+retns = []
+for t, row in backtest_set.iterrows():
+    signal_ML = model.predict(row)
+    r = back_test_df['r7'][t]
+    if signal_ML == 1:
+        retns_ML.append(r)
+    elif signal_ML == 0:
+        retns_ML.append(-1 * r)
+    else:
+        retns_ML.append(0)
+    
+    if back_test_df['r1'][t] > 0:
+        retns.append(r)
+    elif back_test_df['r1'][t] < 0:
+        retns.append(-1 * r)
+    else:
+        retns.append(0)
+
+# retns_ML_se = pd.Series(retns_ML,index=date_list[test_slicer])
+# retns_se = pd.Series(retns,index=date_list[test_slicer])
+retns_ML_se = pd.Series(retns_ML)
+retns_se = pd.Series(retns)
+net_value(retns_ML_se, benchmark=None,commission=0.0000)
+#%%
+net_value(retns_se, benchmark=None,commission=0.0000)
