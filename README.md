@@ -41,15 +41,33 @@ IF: SPIF of CSI 300
 
 ### Conclusions
 By applying the Catboost, the backtest result can be improved, the following pictures show the backtest result In-Sample and Out-of-Sample:
-##### In-Sample
+##### In-Sample(Symbol: IC)
+Applying the Catboost algorithm:
+![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/525245a1-0c48-4327-97a6-0b23347c4397)
 
-##### Out-of-Sample
+Traditional methods:
+![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/46e37965-31b8-4539-b006-7ee97a8ba3b4)
+
+##### Out-of-Sample(Symbol: IC)
+Applying the Catboost algorithm:
+![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/319eeb76-9a0f-4910-b5b8-695e7c48f067)
+
+Traditional methods:
+![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/8733b973-cf61-4049-95d4-7bb18027c91e)
 
 ##### Training result
+Accuracy：
+![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/e886376f-5b30-4879-9c5f-c422d0888d16)
+
+Logloss
+![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/e3c47771-c1c0-42c5-8da2-406c2de39c3c)
 
 ##### Cross Validation
+Accuracy:
+![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/b0111e52-0286-437c-8f59-98b25e4178bd)
 
-
+Logloss:
+![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/cb56ac84-a591-4063-9ac6-67f94434d507)
 
 ### Discussion
 Still fresh to applying machine learning to predicting asset prices, much work need to be done in the future:
