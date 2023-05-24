@@ -43,14 +43,14 @@ IF: SPIF of CSI 300
 
 ### Conclusions
 By applying the Catboost, the backtest result can be improved, the following pictures show the backtest result In-Sample and Out-of-Sample:
-#### In-Sample(Symbol: IC)
+#### In-Sample  (Symbol: IC)
 ##### Applying the Catboost algorithm:
 ![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/525245a1-0c48-4327-97a6-0b23347c4397)
 
 ##### Traditional methods:
 ![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/46e37965-31b8-4539-b006-7ee97a8ba3b4)
 
-#### Out-of-Sample(Symbol: IC)
+#### Out-of-Sample  (Symbol: IC)
 ##### Applying the Catboost algorithm:
 ![image](https://github.com/algo23-yifeizhou/Assignment_3/assets/125112527/319eeb76-9a0f-4910-b5b8-695e7c48f067)
 
