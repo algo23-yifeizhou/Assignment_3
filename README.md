@@ -21,7 +21,7 @@ CatBoost is a machine learning method based on gradient boosting over decision t
 5. Visualization tools included.
 6. Fast and reproducible distributed training with Apache Spark and CLI.
 
-You can find further information about Catboost and its documentation[here](https://github.com/catboost/catboost)
+You can find further information about Catboost and its documentation [here](https://github.com/catboost/catboost)
 
 ### My contribution and improvement
 Different from classifying of the shapes of stock index trend as the paper introduced. I applied the Catboost algorithm to predict the market intraday momentum. For more information about market intraday momentum, you can refer to: <br>
