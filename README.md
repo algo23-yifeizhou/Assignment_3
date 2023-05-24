@@ -21,14 +21,13 @@ CatBoost is a machine learning method based on gradient boosting over decision t
 5. Visualization tools included.
 6. Fast and reproducible distributed training with Apache Spark and CLI.
 
-You can find further information about Catboost and its documentation [here] (https://github.com/catboost/catboost)
+You can find further information about Catboost and its documentation[here](https://github.com/catboost/catboost)
 
 ### My contribution and improvement
-Different from classifying of the shapes of stock index trend as the paper introduced. I applied the Catboost algorithm to predict the market intraday momentum. For more information about market intraday momentum, you can refer to: 
-
-'
- [Gao, Han, Y., Zhengzi Li, S., & Zhou, G. (2018). Market intraday momentum. Journal of Financial Economics, 129(2), 394–414.](https://doi.org/10.1016/j.jfineco.2018.05.009)
-'
+Different from classifying of the shapes of stock index trend as the paper introduced. I applied the Catboost algorithm to predict the market intraday momentum. For more information about market intraday momentum, you can refer to: <br>
+ [
+  Gao, Han, Y., Zhengzi Li, S., & Zhou, G. (2018). Market intraday momentum. Journal of Financial Economics, 129(2), 394–414. https://doi.org/10.1016/j.jfineco.2018.05.009
+](https://doi.org/10.1016/j.jfineco.2018.05.009)
 
 1. First I split one day to several periods and calculate returns of each period
 2. Find the relationship of returns of these periods and apply Catboost to predict the future returns.
