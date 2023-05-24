@@ -37,9 +37,9 @@ Different from classifying of the shapes of stock index trend as the paper intro
 
 ### Data sets
 Share Price Index Futures used in this assignment:
-IH: SPIF of SSE 50
-IC: SPIF of CSI 500
-IF: SPIF of CSI 300
+1. IH: SPIF of SSE 50
+2. IC: SPIF of CSI 500
+3. IF: SPIF of CSI 300
 
 ### Conclusions
 By applying the Catboost, the backtest result can be improved, the following pictures show the backtest result In-Sample and Out-of-Sample:
