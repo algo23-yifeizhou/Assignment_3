@@ -2,9 +2,7 @@
 
 ### What is it about?
 This course project is a reproduce of 
-  "
-  Xu, Chen, Y., Xiao, T., Wang, J., & Wang, X. (2021). Predicting the trend of stock index based on feature engineering and CatBoost model. International Journal of Financial Engineering, 8(2), 2150027–. https://doi.org/10.1142/S2424786321500274
-"
+  '[Xu, Chen, Y., Xiao, T., Wang, J., & Wang, X. (2021). Predicting the trend of stock index based on feature engineering and CatBoost model. International Journal of Financial Engineering, 8(2), 2150027–. ](https://doi.org/10.1142/S2424786321500274)'
 ### Abstract
 As an important tool to measure the current situation of the whole stock market, the stock index has always been the focus of researchers, especially for its prediction. This paper uses trend types, which are received by clustering price series under multiple time scale, combined with the day-of-the-week effect to construct a categorical feature combination. Based on the historical data of six kinds of Chinese stock indexes, the CatBoost model is used for training and predicting. Experimental results show that the out-of-sample prediction accuracy is 0.55, and the long–short trading strategy can obtain average annualized return of 34.43%, which is a great improvement compared with other classical classification algorithms. Under the rolling back-testing, the model can always obtain stable returns in each period of time from 2012 to 2020. Among them, the SSESC’s long–short strategy has the best performance with an annualized return of 40.85% and a sharp ratio of 1.53. Therefore, the trend information on multiple time-scale features based on feature engineering can be learned by the CatBoost model well, which has a guiding effect on predicting stock index trends.
 
@@ -23,14 +21,14 @@ CatBoost is a machine learning method based on gradient boosting over decision t
 5. Visualization tools included.
 6. Fast and reproducible distributed training with Apache Spark and CLI.
 
-You can find further information about Catboost and its documentation in https://github.com/catboost/catboost
+You can find further information about Catboost and its documentation [here] (https://github.com/catboost/catboost)
 
 ### My contribution and improvement
 Different from classifying of the shapes of stock index trend as the paper introduced. I applied the Catboost algorithm to predict the market intraday momentum. For more information about market intraday momentum, you can refer to: 
 
-"
-  Gao, Han, Y., Zhengzi Li, S., & Zhou, G. (2018). Market intraday momentum. Journal of Financial Economics, 129(2), 394–414. https://doi.org/10.1016/j.jfineco.2018.05.009
-"
+'
+ [Gao, Han, Y., Zhengzi Li, S., & Zhou, G. (2018). Market intraday momentum. Journal of Financial Economics, 129(2), 394–414.](https://doi.org/10.1016/j.jfineco.2018.05.009)
+'
 
 1. First I split one day to several periods and calculate returns of each period
 2. Find the relationship of returns of these periods and apply Catboost to predict the future returns.
