@@ -416,3 +416,5 @@ retns_se = pd.Series(retns)
 net_value(retns_ML_se, benchmark=None,commission=0.0000)
 #%%
 net_value(retns_se, benchmark=None,commission=0.0000)
+
+# %%
